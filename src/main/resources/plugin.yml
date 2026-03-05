@@ -1,0 +1,5 @@
+name: building-competition
+version: '${version}'
+main: io.github.nfoert.buildingcompetition.BuildingCompetition
+api-version: '1.21'
+authors: [ nfoert ]
