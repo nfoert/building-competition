@@ -1,5 +1,5 @@
 # building-competition
-A paper plugin for 1.21.11 for a long-term building competition.
+A Minecraft paper plugin for a long-term building competition.
 
 Uses MultiverseCore for world management and FastAsyncWorldEdit for building the plots.
 
