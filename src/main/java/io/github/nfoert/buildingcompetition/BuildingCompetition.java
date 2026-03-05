@@ -19,10 +19,12 @@ public final class BuildingCompetition extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        CommandsHelper commandsHelper = new CommandsHelper();
+        saveDefaultConfig();
+
+        CommandsHelper commandsHelper = new CommandsHelper(this);
 
         this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
-            commands.registrar().register(commandsHelper.getCommands(getDataFolder()));
+            commands.registrar().register(commandsHelper.getCommands());
         });
     }
 

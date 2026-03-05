@@ -16,6 +16,7 @@ import com.sk89q.worldedit.math.BlockVector3;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import org.bukkit.World;
+import org.bukkit.configuration.file.FileConfiguration;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,13 +26,26 @@ import static org.bukkit.Bukkit.getServer;
 import static org.bukkit.Bukkit.getWorld;
 
 public class CommandsHelper {
+
+    private final BuildingCompetition plugin;
+    private FileConfiguration config;
+
+    public CommandsHelper(BuildingCompetition plugin) {
+        this.plugin = plugin;
+
+        config = this.plugin.getConfig();
+    }
+
     private void sendMessage(CommandContext<CommandSourceStack> context, String message) {
         context.getSource().getExecutor().sendRichMessage(message);
     }
 
-    public LiteralCommandNode<CommandSourceStack> getCommands(File dataFolder) {
+    public LiteralCommandNode<CommandSourceStack> getCommands() {
         LiteralArgumentBuilder<CommandSourceStack> reloadCommand = Commands.literal("reload")
                 .executes(ctx -> {
+                    this.plugin.reloadConfig();
+                    config = this.plugin.getConfig();
+
                     ctx.getSource().getExecutor().sendRichMessage("<b><dark_aqua>BC:</dark_aqua></b> <green>Configuration reloaded!</green>");
 
                     return Command.SINGLE_SUCCESS;
@@ -39,7 +53,10 @@ public class CommandsHelper {
 
         LiteralArgumentBuilder<CommandSourceStack> buildPlotCommand = Commands.literal("buildplot")
                 .executes(ctx -> {
-                    File schematicFile = new File(dataFolder.getAbsolutePath() + "/plot.schem");
+                    File schematicFile = new File(
+                            plugin.getDataFolder(),
+                            config.getString("schem-file")
+                    );
 
                     Clipboard clipboard = null;
                     ClipboardFormat format = ClipboardFormats.findByFile(schematicFile);
@@ -50,10 +67,14 @@ public class CommandsHelper {
                         } catch (IOException e) {
                             e.printStackTrace();
                             sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to load schematic</red>");
+                            return Command.SINGLE_SUCCESS;
                         }
+                    } else {
+                        sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to load schematic</red>");
+                        return Command.SINGLE_SUCCESS;
                     }
 
-                    World plotWorld = getWorld("world");
+                    World plotWorld = getWorld(config.getString("plot-world"));
 
                     if (plotWorld != null) {
                         try (EditSession editSession = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(plotWorld))) {
@@ -66,13 +87,17 @@ public class CommandsHelper {
                             );
 
                             clipboard.paste(editSession, pasteLocation, true);
+
+                            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Pasted!</green>");
                         } catch (WorldEditException e) {
                             e.printStackTrace();
                             sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to paste schematic</red>");
+                            return Command.SINGLE_SUCCESS;
                         }
+                    } else {
+                        sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to find world!</red>");
+                        return Command.SINGLE_SUCCESS;
                     }
-
-                    sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Pasted!</green>");
 
                     return Command.SINGLE_SUCCESS;
                 });
