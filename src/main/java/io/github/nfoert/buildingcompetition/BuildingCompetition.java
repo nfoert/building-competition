@@ -22,7 +22,7 @@ public final class BuildingCompetition extends JavaPlugin implements Listener {
         CommandsHelper commandsHelper = new CommandsHelper();
 
         this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
-            commands.registrar().register(commandsHelper.getCommands());
+            commands.registrar().register(commandsHelper.getCommands(getDataFolder()));
         });
     }
 
