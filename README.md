@@ -12,5 +12,7 @@ Uses MultiverseCore for world management and FastAsyncWorldEdit for building the
 - [x] Make a configuration system
 - [x] Make a command for reloading the configuration
 - [x] Place schematic based on configurable `plot_world` and `schem_file`
-- [ ] Use a JSON file to set and save plot data on a player
-    - `uuid`, `plot_width`, `plot_height`, `plot_x`, `plot_y`
+- [x] Use the PDC to set and save plot data on a player
+    1. Check the PDC list of plots, and find the closest location in the x and y direction where a tiled plot can be placed
+    2. Build that plot based on the given information
+    3. Set plot details in the JSON file: `uuid`, `plot_width`, `plot_height`, `plot_x`, `plot_y`
