@@ -9,6 +9,8 @@ Uses MultiverseCore for world management and FastAsyncWorldEdit for building the
 ## To-Do
 - [x] Make a chat command
 - [x] Make the chat command support placing a `.schem` file
-- [ ] Make a configuration system
-- [ ] Make a command for reloading the configuration
-- [ ] Place schematic based on configurable `plot_world` and `schem_file`
+- [x] Make a configuration system
+- [x] Make a command for reloading the configuration
+- [x] Place schematic based on configurable `plot_world` and `schem_file`
+- [ ] Use a JSON file to set and save plot data on a player
+    - `uuid`, `plot_width`, `plot_height`, `plot_x`, `plot_y`
