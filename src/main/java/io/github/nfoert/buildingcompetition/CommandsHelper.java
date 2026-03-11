@@ -182,9 +182,13 @@ public class CommandsHelper {
                     ctx.getSource().getExecutor().sendRichMessage("\n" +
                             "<b><dark_aqua>Building Competition</dark_aqua></b> by <gray>nfoert</gray>\n" +
                             "<click:open_url:'https://github.com/nfoert/building-competition'><blue><i>github.com/nfoert/building-competition</i></blue></click>\n");
-                    ctx.getSource().getExecutor().sendRichMessage("<dark_aqua>Available commands:</dark_aqua>\n" +
+                    ctx.getSource().getExecutor().sendRichMessage(
+                            "<dark_aqua>Available commands:</dark_aqua>\n" +
                             "\n" +
-                            "<aqua>/bc reload</aqua> <gray>- Reloads the configuration</gray>");
+                            "<aqua>/bc reload</aqua> <gray>- Reloads the configuration</gray>" +
+                            "<aqua>/bc build</aqua> <gray>- Builds a plot for the sender</gray>" +
+                            "<aqua>/bc reset</aqua> <gray>- Resets the plot file</gray>"
+                    );
 
                     return Command.SINGLE_SUCCESS;
                 });
