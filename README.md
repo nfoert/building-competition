@@ -16,3 +16,5 @@ Uses MultiverseCore for world management and FastAsyncWorldEdit for building the
     1. Check the PDC list of plots, and find the closest location in the x and y direction where a tiled plot can be placed
     2. Build that plot based on the given information
     3. Set plot details in the JSON file: `uuid`, `plot_width`, `plot_height`, `plot_x`, `plot_y`
+- [ ] Command permissions
+- [ ] When creating a plot, create a worldguard allow on their plot
