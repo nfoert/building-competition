@@ -47,7 +47,7 @@ public class CommandsHelper {
     }
 
     public LiteralCommandNode<CommandSourceStack> getCommands() {
-        LiteralArgumentBuilder<CommandSourceStack> reloadCommand = Commands.literal("reload")
+        LiteralArgumentBuilder<CommandSourceStack> reloadCommand = Commands.literal("reload").requires(sender -> sender.getSender().hasPermission("bc.reload"))
                 .executes(ctx -> {
                     this.plugin.reloadConfig();
                     config = this.plugin.getConfig();
@@ -57,7 +57,7 @@ public class CommandsHelper {
                     return Command.SINGLE_SUCCESS;
                 });
 
-        LiteralArgumentBuilder<CommandSourceStack> buildPlotCommand = Commands.literal("buildplot")
+        LiteralArgumentBuilder<CommandSourceStack> buildPlotCommand = Commands.literal("buildplot").requires(sender -> sender.getSender().hasPermission("bc.build"))
                 .executes(ctx -> {
                     // Set up
                     PlotManager plotManager = new PlotManager(plugin);
@@ -157,7 +157,7 @@ public class CommandsHelper {
                     return Command.SINGLE_SUCCESS;
                 });
 
-        LiteralArgumentBuilder<CommandSourceStack> resetPlotsCommand = Commands.literal("reset")
+        LiteralArgumentBuilder<CommandSourceStack> resetPlotsCommand = Commands.literal("reset").requires(sender -> sender.getSender().hasPermission("bc.reset"))
                 .executes(ctx -> {
                     PlotManager plotManager = new PlotManager(plugin);
 
