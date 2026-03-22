@@ -14,8 +14,18 @@ import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
 import com.sk89q.worldedit.math.BlockVector2;
 import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.regions.CuboidRegion;
+import com.sk89q.worldguard.WorldGuard;
+import com.sk89q.worldguard.domains.DefaultDomain;
+import com.sk89q.worldguard.protection.flags.Flags;
+import com.sk89q.worldguard.protection.flags.StateFlag;
+import com.sk89q.worldguard.protection.managers.RegionManager;
+import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+import com.sk89q.worldguard.protection.regions.RegionContainer;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
@@ -140,6 +150,53 @@ public class CommandsHelper {
                             );
 
                             clipboard.paste(editSession, pasteLocation, true);
+
+                            // Add WorldGuard exception to plot location
+                            BlockVector3 min = clipboard.getMinimumPoint();
+                            BlockVector3 max = clipboard.getMaximumPoint();
+                            BlockVector3 origin = clipboard.getOrigin();
+                            BlockVector3 minPoint = pasteLocation.add(min.subtract(origin));
+                            BlockVector3 maxPoint = pasteLocation.add(max.subtract(origin));
+
+                            RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+                            RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
+
+                            if (regionManager == null) {
+                                player.sendMessage("WorldGuard not avaliable");
+                                return Command.SINGLE_SUCCESS;
+                            }
+
+                            ProtectedRegion protectedRegion = new ProtectedCuboidRegion(
+                                    player.getUniqueId() + "-plot",
+                                    minPoint,
+                                    maxPoint
+                            );
+
+                            // 3. Assign the player as an owner
+                            UUID playerUUID = player.getUniqueId();
+                            DefaultDomain domain = protectedRegion.getOwners();
+                            domain.addPlayer(playerUUID);
+                            // You can also add members if needed
+                            // protectedRegion.getMembers().addPlayer(playerUUID);
+
+                            // 4. Set flags to allow all actions for the owner (optional, as owners bypass most flags by default)
+                            // Owners generally have full build permissions within their region.
+                            // To ensure explicit build permission for everyone *within* the region (and overridden by the owner status), you could add:
+                            protectedRegion.setFlag(Flags.BUILD, StateFlag.State.ALLOW);
+                            // You can set other flags as desired, e.g.,
+                            // protectedRegion.setFlag(Flags.PVP, StateFlag.State.DENY);
+
+
+                            // 5. Add the region to the RegionManager
+                            try {
+                                regionManager.addRegion(protectedRegion);
+                                player.sendMessage("WorldGuard region created and you are the owner!");
+                                // Save the changes to disk
+                                regionManager.save();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                return Command.SINGLE_SUCCESS;
+                            }
 
                             ctx.getSource().getExecutor().teleport(new Location(plotWorld, x + 0.5, 0 + 1, z + 0.5));
 
