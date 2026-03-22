@@ -56,199 +56,207 @@ public class CommandsHelper {
         context.getSource().getExecutor().sendRichMessage(message);
     }
 
+    private int reloadPlugin(CommandContext<CommandSourceStack> ctx) {
+        this.plugin.reloadConfig();
+        config = this.plugin.getConfig();
+
+        ctx.getSource().getExecutor().sendRichMessage("<b><dark_aqua>BC:</dark_aqua></b> <green>Configuration reloaded!</green>");
+
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int buildPlot(CommandContext<CommandSourceStack> ctx) {
+        // Set up
+        PlotManager plotManager = new PlotManager(plugin);
+        World plotWorld = getWorld(config.getString("plot-world"));
+        Entity player = ctx.getSource().getExecutor();
+
+        // If a player already has a plot, teleport them there
+        if (config.getBoolean("dev") == false) {
+            if (plotWorld != null) {
+                if (plotManager.hasPlot(player.getUniqueId())) {
+                    player.teleport(plotManager.getPlot(player.getUniqueId(), plotWorld));
+                    sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>You've been teleported to your existing plot!</green>");
+                    return Command.SINGLE_SUCCESS;
+                }
+            } else {
+                sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to find world!</red>");
+                return Command.SINGLE_SUCCESS;
+            }
+        }
+
+        sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <aqua>Building plot for " + ctx.getSource().getExecutor().getName() + "...</aqua>");
+
+        // Load schematic
+        File schematicFile = new File(
+                plugin.getDataFolder(),
+                config.getString("schem-file")
+        );
+
+        Clipboard clipboard = null;
+        ClipboardFormat format = ClipboardFormats.findByFile(schematicFile);
+
+        if (format != null) {
+            try (ClipboardReader reader = format.getReader(new FileInputStream(schematicFile))) {
+                clipboard = reader.read();
+            } catch (IOException e) {
+                e.printStackTrace();
+                sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to load schematic</red>");
+                return Command.SINGLE_SUCCESS;
+            }
+        } else {
+            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to load schematic</red>");
+            return Command.SINGLE_SUCCESS;
+        }
+
+        // Figure out where to place the schematic
+        Set<BlockVector2> used = plotManager.getUsedPlots();
+
+        int spacing = clipboard.getWidth() + 16;
+
+        BlockVector2 plot = plotManager.findNextPlot(used, spacing);
+
+        int x = plot.x();
+        int z = plot.z();
+
+        try {
+            if (config.getBoolean("dev") == true) {
+                plotManager.setPlot(UUID.randomUUID(), x, z);
+            } else {
+                plotManager.setPlot(ctx.getSource().getExecutor().getUniqueId(), x, z);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+
+            ctx.getSource().getExecutor().sendRichMessage(
+                    "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to save plot data!</red>"
+            );
+
+            return Command.SINGLE_SUCCESS;
+        }
+
+        // Place the schematic
+        if (plotWorld != null) {
+            try (EditSession editSession = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(plotWorld))) {
+                editSession.enableQueue();
+
+                BlockVector3 pasteLocation = BlockVector3.at(
+                        x,
+                        0,
+                        z
+                );
+
+                clipboard.paste(editSession, pasteLocation, true);
+
+                // Add WorldGuard exception to plot location
+                BlockVector3 min = clipboard.getMinimumPoint();
+                BlockVector3 max = clipboard.getMaximumPoint();
+                BlockVector3 origin = clipboard.getOrigin();
+                BlockVector3 minPoint = pasteLocation.add(min.subtract(origin));
+                BlockVector3 maxPoint = pasteLocation.add(max.subtract(origin));
+
+                RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+                RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
+
+                if (regionManager == null) {
+                    player.sendMessage("WorldGuard not avaliable");
+                    return Command.SINGLE_SUCCESS;
+                }
+
+                ProtectedRegion protectedRegion = new ProtectedCuboidRegion(
+                        player.getUniqueId() + "-plot",
+                        minPoint,
+                        maxPoint
+                );
+
+                // 3. Assign the player as an owner
+                UUID playerUUID = player.getUniqueId();
+                DefaultDomain domain = protectedRegion.getOwners();
+                domain.addPlayer(playerUUID);
+                // You can also add members if needed
+                // protectedRegion.getMembers().addPlayer(playerUUID);
+
+                // 4. Set flags to allow all actions for the owner (optional, as owners bypass most flags by default)
+                // Owners generally have full build permissions within their region.
+                // To ensure explicit build permission for everyone *within* the region (and overridden by the owner status), you could add:
+                protectedRegion.setFlag(Flags.BUILD, StateFlag.State.ALLOW);
+                // You can set other flags as desired, e.g.,
+                // protectedRegion.setFlag(Flags.PVP, StateFlag.State.DENY);
+
+
+                // 5. Add the region to the RegionManager
+                try {
+                    regionManager.addRegion(protectedRegion);
+                    player.sendMessage("WorldGuard region created and you are the owner!");
+                    // Save the changes to disk
+                    regionManager.save();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return Command.SINGLE_SUCCESS;
+                }
+
+                ctx.getSource().getExecutor().teleport(new Location(plotWorld, x + 0.5, 0 + 1, z + 0.5));
+
+                sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>You've been teleported to your plot!</green>");
+            } catch (WorldEditException e) {
+                e.printStackTrace();
+                sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to paste schematic</red>");
+                return Command.SINGLE_SUCCESS;
+            }
+        } else {
+            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to find world!</red>");
+            return Command.SINGLE_SUCCESS;
+        }
+
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int resetPlots(CommandContext<CommandSourceStack> ctx) {
+        PlotManager plotManager = new PlotManager(plugin);
+
+        try {
+            plotManager.resetPlots();
+        } catch (IOException e) {
+            e.printStackTrace();
+
+            ctx.getSource().getExecutor().sendRichMessage(
+                    "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to reset plots!</red>"
+            );
+
+            return Command.SINGLE_SUCCESS;
+        }
+
+        ctx.getSource().getExecutor().sendRichMessage("<b><dark_aqua>BC:</dark_aqua></b> <green>Plots reset!</green>");
+
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int pluginInfo(CommandContext<CommandSourceStack> ctx) {
+        ctx.getSource().getExecutor().sendRichMessage("\n" +
+                "<b><dark_aqua>Building Competition</dark_aqua></b> by <gray>nfoert</gray>\n" +
+                "<click:open_url:'https://github.com/nfoert/building-competition'><blue><i>github.com/nfoert/building-competition</i></blue></click>\n");
+        ctx.getSource().getExecutor().sendRichMessage(
+                "<dark_aqua>Available commands:</dark_aqua>\n" +
+                        "\n" +
+                        "<aqua>/bc reload</aqua> <gray>- Reloads the configuration</gray>" +
+                        "<aqua>/bc build</aqua> <gray>- Builds a plot for the sender</gray>" +
+                        "<aqua>/bc reset</aqua> <gray>- Resets the plot file</gray>"
+        );
+
+        return Command.SINGLE_SUCCESS;
+    }
+
     public LiteralCommandNode<CommandSourceStack> getCommands() {
         LiteralArgumentBuilder<CommandSourceStack> reloadCommand = Commands.literal("reload").requires(sender -> sender.getSender().hasPermission("bc.reload"))
-                .executes(ctx -> {
-                    this.plugin.reloadConfig();
-                    config = this.plugin.getConfig();
-
-                    ctx.getSource().getExecutor().sendRichMessage("<b><dark_aqua>BC:</dark_aqua></b> <green>Configuration reloaded!</green>");
-
-                    return Command.SINGLE_SUCCESS;
-                });
+                .executes(ctx -> reloadPlugin(ctx));
 
         LiteralArgumentBuilder<CommandSourceStack> buildPlotCommand = Commands.literal("buildplot").requires(sender -> sender.getSender().hasPermission("bc.build"))
-                .executes(ctx -> {
-                    // Set up
-                    PlotManager plotManager = new PlotManager(plugin);
-                    World plotWorld = getWorld(config.getString("plot-world"));
-                    Entity player = ctx.getSource().getExecutor();
-
-                    // If a player already has a plot, teleport them there
-                    if (config.getBoolean("dev") == false) {
-                        if (plotWorld != null) {
-                            if (plotManager.hasPlot(player.getUniqueId())) {
-                                player.teleport(plotManager.getPlot(player.getUniqueId(), plotWorld));
-                                sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>You've been teleported to your existing plot!</green>");
-                                return Command.SINGLE_SUCCESS;
-                            }
-                        } else {
-                            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to find world!</red>");
-                            return Command.SINGLE_SUCCESS;
-                        }
-                    }
-
-                    sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <aqua>Building plot for " + ctx.getSource().getExecutor().getName() + "...</aqua>");
-
-                    // Load schematic
-                    File schematicFile = new File(
-                            plugin.getDataFolder(),
-                            config.getString("schem-file")
-                    );
-
-                    Clipboard clipboard = null;
-                    ClipboardFormat format = ClipboardFormats.findByFile(schematicFile);
-
-                    if (format != null) {
-                        try (ClipboardReader reader = format.getReader(new FileInputStream(schematicFile))) {
-                            clipboard = reader.read();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to load schematic</red>");
-                            return Command.SINGLE_SUCCESS;
-                        }
-                    } else {
-                        sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to load schematic</red>");
-                        return Command.SINGLE_SUCCESS;
-                    }
-
-                    // Figure out where to place the schematic
-                    Set<BlockVector2> used = plotManager.getUsedPlots();
-
-                    int spacing = clipboard.getWidth() + 16;
-
-                    BlockVector2 plot = plotManager.findNextPlot(used, spacing);
-
-                    int x = plot.x();
-                    int z = plot.z();
-
-                    try {
-                        if (config.getBoolean("dev") == true) {
-                            plotManager.setPlot(UUID.randomUUID(), x, z);
-                        } else {
-                            plotManager.setPlot(ctx.getSource().getExecutor().getUniqueId(), x, z);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-
-                        ctx.getSource().getExecutor().sendRichMessage(
-                                "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to save plot data!</red>"
-                        );
-
-                        return Command.SINGLE_SUCCESS;
-                    }
-
-                    // Place the schematic
-                    if (plotWorld != null) {
-                        try (EditSession editSession = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(plotWorld))) {
-                            editSession.enableQueue();
-
-                            BlockVector3 pasteLocation = BlockVector3.at(
-                                    x,
-                                    0,
-                                    z
-                            );
-
-                            clipboard.paste(editSession, pasteLocation, true);
-
-                            // Add WorldGuard exception to plot location
-                            BlockVector3 min = clipboard.getMinimumPoint();
-                            BlockVector3 max = clipboard.getMaximumPoint();
-                            BlockVector3 origin = clipboard.getOrigin();
-                            BlockVector3 minPoint = pasteLocation.add(min.subtract(origin));
-                            BlockVector3 maxPoint = pasteLocation.add(max.subtract(origin));
-
-                            RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-                            RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
-
-                            if (regionManager == null) {
-                                player.sendMessage("WorldGuard not avaliable");
-                                return Command.SINGLE_SUCCESS;
-                            }
-
-                            ProtectedRegion protectedRegion = new ProtectedCuboidRegion(
-                                    player.getUniqueId() + "-plot",
-                                    minPoint,
-                                    maxPoint
-                            );
-
-                            // 3. Assign the player as an owner
-                            UUID playerUUID = player.getUniqueId();
-                            DefaultDomain domain = protectedRegion.getOwners();
-                            domain.addPlayer(playerUUID);
-                            // You can also add members if needed
-                            // protectedRegion.getMembers().addPlayer(playerUUID);
-
-                            // 4. Set flags to allow all actions for the owner (optional, as owners bypass most flags by default)
-                            // Owners generally have full build permissions within their region.
-                            // To ensure explicit build permission for everyone *within* the region (and overridden by the owner status), you could add:
-                            protectedRegion.setFlag(Flags.BUILD, StateFlag.State.ALLOW);
-                            // You can set other flags as desired, e.g.,
-                            // protectedRegion.setFlag(Flags.PVP, StateFlag.State.DENY);
-
-
-                            // 5. Add the region to the RegionManager
-                            try {
-                                regionManager.addRegion(protectedRegion);
-                                player.sendMessage("WorldGuard region created and you are the owner!");
-                                // Save the changes to disk
-                                regionManager.save();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                return Command.SINGLE_SUCCESS;
-                            }
-
-                            ctx.getSource().getExecutor().teleport(new Location(plotWorld, x + 0.5, 0 + 1, z + 0.5));
-
-                            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>You've been teleported to your plot!</green>");
-                        } catch (WorldEditException e) {
-                            e.printStackTrace();
-                            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to paste schematic</red>");
-                            return Command.SINGLE_SUCCESS;
-                        }
-                    } else {
-                        sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to find world!</red>");
-                        return Command.SINGLE_SUCCESS;
-                    }
-
-                    return Command.SINGLE_SUCCESS;
-                });
+                .executes(ctx -> buildPlot(ctx));
 
         LiteralArgumentBuilder<CommandSourceStack> resetPlotsCommand = Commands.literal("reset").requires(sender -> sender.getSender().hasPermission("bc.reset"))
-                .executes(ctx -> {
-                    PlotManager plotManager = new PlotManager(plugin);
+                .executes(ctx -> resetPlots(ctx));
 
-                    try {
-                        plotManager.resetPlots();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-
-                        ctx.getSource().getExecutor().sendRichMessage(
-                                "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to reset plots!</red>"
-                        );
-
-                        return Command.SINGLE_SUCCESS;
-                    }
-
-                    ctx.getSource().getExecutor().sendRichMessage("<b><dark_aqua>BC:</dark_aqua></b> <green>Plots reset!</green>");
-
-                    return Command.SINGLE_SUCCESS;
-                });
-
-        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("bc").executes(ctx -> {
-                    ctx.getSource().getExecutor().sendRichMessage("\n" +
-                            "<b><dark_aqua>Building Competition</dark_aqua></b> by <gray>nfoert</gray>\n" +
-                            "<click:open_url:'https://github.com/nfoert/building-competition'><blue><i>github.com/nfoert/building-competition</i></blue></click>\n");
-                    ctx.getSource().getExecutor().sendRichMessage(
-                            "<dark_aqua>Available commands:</dark_aqua>\n" +
-                            "\n" +
-                            "<aqua>/bc reload</aqua> <gray>- Reloads the configuration</gray>" +
-                            "<aqua>/bc build</aqua> <gray>- Builds a plot for the sender</gray>" +
-                            "<aqua>/bc reset</aqua> <gray>- Resets the plot file</gray>"
-                    );
-
-                    return Command.SINGLE_SUCCESS;
-                });
+        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("bc").executes(ctx -> pluginInfo(ctx));
 
         root.then(reloadCommand);
         root.then(buildPlotCommand);
