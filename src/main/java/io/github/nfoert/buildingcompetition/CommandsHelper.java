@@ -14,7 +14,6 @@ import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
 import com.sk89q.worldedit.math.BlockVector2;
 import com.sk89q.worldedit.math.BlockVector3;
-import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.domains.DefaultDomain;
 import com.sk89q.worldguard.protection.flags.Flags;
@@ -25,13 +24,10 @@ import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import com.sk89q.worldguard.protection.regions.RegionContainer;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -160,7 +156,7 @@ public class CommandsHelper {
                 RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
 
                 if (regionManager == null) {
-                    player.sendMessage("WorldGuard not avaliable");
+                    sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>WorldGuard is not avaliable</red>");
                     return Command.SINGLE_SUCCESS;
                 }
 
@@ -170,28 +166,17 @@ public class CommandsHelper {
                         maxPoint
                 );
 
-                // 3. Assign the player as an owner
                 UUID playerUUID = player.getUniqueId();
                 DefaultDomain domain = protectedRegion.getOwners();
                 domain.addPlayer(playerUUID);
-                // You can also add members if needed
-                // protectedRegion.getMembers().addPlayer(playerUUID);
-
-                // 4. Set flags to allow all actions for the owner (optional, as owners bypass most flags by default)
-                // Owners generally have full build permissions within their region.
-                // To ensure explicit build permission for everyone *within* the region (and overridden by the owner status), you could add:
                 protectedRegion.setFlag(Flags.BUILD, StateFlag.State.ALLOW);
-                // You can set other flags as desired, e.g.,
-                // protectedRegion.setFlag(Flags.PVP, StateFlag.State.DENY);
 
-
-                // 5. Add the region to the RegionManager
                 try {
                     regionManager.addRegion(protectedRegion);
                     player.sendMessage("WorldGuard region created and you are the owner!");
-                    // Save the changes to disk
                     regionManager.save();
                 } catch (Exception e) {
+                    sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to set WorldGuard region</red>");
                     e.printStackTrace();
                     return Command.SINGLE_SUCCESS;
                 }
@@ -234,6 +219,7 @@ public class CommandsHelper {
         RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
 
         if (regionManager == null) {
+            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>WorldGuard is not available</red>");
             return Command.SINGLE_SUCCESS;
         }
 
@@ -250,6 +236,7 @@ public class CommandsHelper {
             // Save changes
             regionManager.save();
         } catch (Exception e) {
+            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to remove WorldGuard region</red>");
             e.printStackTrace();
         }
 
