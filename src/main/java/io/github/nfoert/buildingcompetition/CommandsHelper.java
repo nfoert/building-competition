@@ -252,9 +252,9 @@ public class CommandsHelper {
         ctx.getSource().getExecutor().sendRichMessage(
                 "<dark_aqua>Available commands:</dark_aqua>\n" +
                         "\n" +
-                        "<aqua>/bc reload</aqua> <gray>- Reloads the configuration</gray>" +
-                        "<aqua>/bc build</aqua> <gray>- Builds a plot for the sender</gray>" +
-                        "<aqua>/bc reset</aqua> <gray>- Resets the plot file</gray>"
+                        "<aqua>/bc reload</aqua> <gray>- Reloads the configuration</gray>\n" +
+                        "<aqua>/bc buildplot</aqua> <gray>- Builds a plot for the sender</gray>\n" +
+                        "<aqua>/bc reset</aqua> <gray>- Resets the plot file</gray>\n"
         );
 
         return Command.SINGLE_SUCCESS;
