@@ -36,6 +36,7 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -212,7 +213,9 @@ public class CommandsHelper {
     }
 
     private int resetPlots(CommandContext<CommandSourceStack> ctx) {
+        // Clear plots.yml
         PlotManager plotManager = new PlotManager(plugin);
+        World plotWorld = getWorld(config.getString("plot-world"));
 
         try {
             plotManager.resetPlots();
@@ -224,6 +227,30 @@ public class CommandsHelper {
             );
 
             return Command.SINGLE_SUCCESS;
+        }
+
+        // Clear WorldGuard regions
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
+
+        if (regionManager == null) {
+            return Command.SINGLE_SUCCESS;
+        }
+
+        // Copy keys to avoid concurrent modification
+        Set<String> regionIds = new HashSet<>(regionManager.getRegions().keySet());
+
+        try {
+            for (String id : regionIds) {
+                if (!id.equalsIgnoreCase("__global__")) {
+                    regionManager.removeRegion(id);
+                }
+            }
+
+            // Save changes
+            regionManager.save();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         ctx.getSource().getExecutor().sendRichMessage("<b><dark_aqua>BC:</dark_aqua></b> <green>Plots reset!</green>");
