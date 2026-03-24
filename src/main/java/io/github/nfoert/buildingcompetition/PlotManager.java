@@ -51,11 +51,25 @@ public class PlotManager {
         return new Location(world, x, world.getHighestBlockYAt(x, z) + 1, z);
     }
 
-    public void setPlot(UUID uuid, int x, int z) throws IOException {
+    public Location getPlotCenter(UUID uuid, World world) {
+        String path = "plots." + uuid;
+
+        int x = plots.getInt(path + ".centerX");
+        int y = plots.getInt(path + ".centerY");
+        int z = plots.getInt(path + ".centerZ");
+
+        return new Location(world, x, y, z);
+    }
+
+    public void setPlot(UUID uuid, int x, int z, double centerX, double centerY, double centerZ) throws IOException {
         String path = "plots." + uuid;
 
         plots.set(path + ".x", x);
         plots.set(path + ".z", z);
+
+        plots.set(path + ".centerX", centerX);
+        plots.set(path + ".centerY", centerY);
+        plots.set(path + ".centerZ", centerZ);
 
         save();
     }

@@ -14,6 +14,7 @@ import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
 import com.sk89q.worldedit.math.BlockVector2;
 import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.world.block.BlockState;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.domains.DefaultDomain;
 import com.sk89q.worldguard.protection.flags.Flags;
@@ -72,7 +73,8 @@ public class CommandsHelper {
         if (config.getBoolean("dev") == false) {
             if (plotWorld != null) {
                 if (plotManager.hasPlot(player.getUniqueId())) {
-                    player.teleport(plotManager.getPlot(player.getUniqueId(), plotWorld));
+                    ctx.getSource().getExecutor().teleport(plotManager.getPlotCenter(player.getUniqueId(), plotWorld));
+
                     sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>You've been teleported to your existing plot!</green>");
                     return Command.SINGLE_SUCCESS;
                 }
@@ -116,22 +118,6 @@ public class CommandsHelper {
         int x = plot.x();
         int z = plot.z();
 
-        try {
-            if (config.getBoolean("dev") == true) {
-                plotManager.setPlot(UUID.randomUUID(), x, z);
-            } else {
-                plotManager.setPlot(ctx.getSource().getExecutor().getUniqueId(), x, z);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-
-            ctx.getSource().getExecutor().sendRichMessage(
-                    "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to save plot data!</red>"
-            );
-
-            return Command.SINGLE_SUCCESS;
-        }
-
         // Place the schematic
         if (plotWorld != null) {
             try (EditSession editSession = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(plotWorld))) {
@@ -152,36 +138,105 @@ public class CommandsHelper {
                 BlockVector3 minPoint = pasteLocation.add(min.subtract(origin));
                 BlockVector3 maxPoint = pasteLocation.add(max.subtract(origin));
 
+                double centerX = (minPoint.x() + maxPoint.x()) / 2.0;
+                double centerZ = (minPoint.z() + maxPoint.z()) / 2.0;
+                double centerY = minPoint.y() + 2;
+
                 RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
                 RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
 
-                if (regionManager == null) {
-                    sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>WorldGuard is not avaliable</red>");
+                // Save plot data
+                try {
+                    if (config.getBoolean("dev")) {
+                        plotManager.setPlot(UUID.randomUUID(), x, z, centerX, centerY, centerZ);
+                    } else {
+                        plotManager.setPlot(ctx.getSource().getExecutor().getUniqueId(), x, z, centerX, centerY, centerZ);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+
+                    ctx.getSource().getExecutor().sendRichMessage(
+                            "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to save plot data!</red>"
+                    );
+
                     return Command.SINGLE_SUCCESS;
                 }
 
-                ProtectedRegion protectedRegion = new ProtectedCuboidRegion(
-                        player.getUniqueId() + "-plot",
-                        minPoint,
-                        maxPoint
+                //    Find corner blocks
+                BlockVector3 redstone1 = null;
+                BlockVector3 redstone2 = null;
+
+                for (int cornerX = min.x(); cornerX <= max.x(); cornerX++) {
+                    for (int cornerY = min.y(); cornerY <= max.y(); cornerY++) {
+                        for (int cornerZ = min.z(); cornerZ <= max.z(); cornerZ++) {
+                            BlockVector3 pos = BlockVector3.at(cornerX, cornerY, cornerZ);
+                            BlockState block = clipboard.getBlock(pos);
+
+                            if (block.getBlockType().id().equals(config.getString("build-area-corner"))) {
+                                if (redstone1 == null) {
+                                    redstone1 = pos;
+                                } else {
+                                    redstone2 = pos;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (redstone1 == null || redstone2 == null) {
+                    sendMessage(ctx, "<red>Schematic must contain exactly 2 redstone blocks!</red>");
+                    return Command.SINGLE_SUCCESS;
+                }
+
+                BlockVector3 worldRed1 = pasteLocation.add(redstone1.subtract(origin));
+                BlockVector3 worldRed2 = pasteLocation.add(redstone2.subtract(origin));
+
+                //    Get region heights
+                int buildHeight = config.getInt("build-height", 100);
+
+                // Base Y = redstone block Y + 1 (start ABOVE floor)
+                int baseY = Math.min(worldRed1.y(), worldRed2.y()) + 1;
+
+                BlockVector3 innerMin = BlockVector3.at(
+                        Math.min(worldRed1.x(), worldRed2.x()),
+                        baseY,
+                        Math.min(worldRed1.z(), worldRed2.z())
                 );
 
-                UUID playerUUID = player.getUniqueId();
-                DefaultDomain domain = protectedRegion.getOwners();
-                domain.addPlayer(playerUUID);
-                protectedRegion.setFlag(Flags.BUILD, StateFlag.State.ALLOW);
+                BlockVector3 innerMax = BlockVector3.at(
+                        Math.max(worldRed1.x(), worldRed2.x()),
+                        baseY + buildHeight,
+                        Math.max(worldRed1.z(), worldRed2.z())
+                );
+
+                //    Create regions
+                String baseId = player.getUniqueId().toString();
+
+                ProtectedRegion inner = new ProtectedCuboidRegion(
+                        baseId + "_build",
+                        innerMin,
+                        innerMax
+                );
+
+                // No priority needed anymore (no conflict region)
+                inner.setFlag(Flags.BUILD, StateFlag.State.ALLOW);
+
+                // Ownership
+                inner.getOwners().addPlayer(player.getUniqueId());
 
                 try {
-                    regionManager.addRegion(protectedRegion);
-                    player.sendMessage("WorldGuard region created and you are the owner!");
+                    regionManager.addRegion(inner);
                     regionManager.save();
                 } catch (Exception e) {
-                    sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to set WorldGuard region</red>");
+                    sendMessage(ctx, "<red>Failed to create regions</red>");
                     e.printStackTrace();
-                    return Command.SINGLE_SUCCESS;
                 }
 
-                ctx.getSource().getExecutor().teleport(new Location(plotWorld, x + 0.5, 0 + 1, z + 0.5));
+                // Teleport to the center of the plot
+                ctx.getSource().getExecutor().teleport(
+                        new Location(plotWorld, centerX + 0.5, centerY, centerZ + 0.5)
+                );
 
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>You've been teleported to your plot!</green>");
             } catch (WorldEditException e) {
