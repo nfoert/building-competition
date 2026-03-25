@@ -24,6 +24,9 @@ public class PlotManager {
         load();
     }
 
+    /**
+     * Loads the plots from the `plots.yml` file
+     */
     public void load() {
         plotsFile = new File(plugin.getDataFolder(), "plots.yml");
 
@@ -34,10 +37,21 @@ public class PlotManager {
         plots = YamlConfiguration.loadConfiguration(plotsFile);
     }
 
+    /**
+     * Saves the `plots.yml` file
+     *
+     * @throws IOException If the file is unable to be saved
+     */
     public void save() throws IOException {
         plots.save(plotsFile);
     }
 
+    /**
+     * Checks if a user already has a plot created
+     *
+     * @param uuid The player's UUID
+     * @return The location of the user's plot
+     */
     public boolean hasPlot(UUID uuid) {
         return plots.contains("plots." + uuid.toString());
     }
@@ -51,6 +65,13 @@ public class PlotManager {
         return new Location(world, x, world.getHighestBlockYAt(x, z) + 1, z);
     }
 
+    /**
+     * Gets the center point of a user's plot. Used for teleporting the player to their plot.
+     *
+     * @param uuid The player's UUID
+     * @param world The world where the plot is located
+     * @return The location of the center of the plot
+     */
     public Location getPlotCenter(UUID uuid, World world) {
         String path = "plots." + uuid;
 
@@ -61,6 +82,17 @@ public class PlotManager {
         return new Location(world, x, y, z);
     }
 
+    /**
+     * Store plot information in `plots.yml`
+     *
+     * @param uuid The player's UUID
+     * @param x The x location of the plot
+     * @param z The z location of the plot
+     * @param centerX The center x of the plot
+     * @param centerY The center y of the plot
+     * @param centerZ The center z of the plot
+     * @throws IOException If `plots.yml` is not able to be saved
+     */
     public void setPlot(UUID uuid, int x, int z, double centerX, double centerY, double centerZ) throws IOException {
         String path = "plots." + uuid;
 
@@ -74,6 +106,11 @@ public class PlotManager {
         save();
     }
 
+    /**
+     * Get all existing plots
+     *
+     * @return The location of all the used plots
+     */
     public Set<BlockVector2> getUsedPlots() {
         Set<BlockVector2> used = new HashSet<>();
 
@@ -91,6 +128,13 @@ public class PlotManager {
         return used;
     }
 
+    /**
+     * Find the best spot to place a new plot
+     *
+     * @param used All existing plots
+     * @param spacing The distance between each plots
+     * @return The location to place a new plot
+     */
     public BlockVector2 findNextPlot(Set<BlockVector2> used, int spacing) {
         int x = 0;
         int z = 0;
@@ -124,6 +168,11 @@ public class PlotManager {
         throw new RuntimeException("No free plots found");
     }
 
+    /**
+     * Resets the `plots.yml` file
+     *
+     * @throws IOException If `plots.yml` is unable to be saved
+     */
     public void resetPlots() throws IOException {
         plots.set("plots", null);
         save();

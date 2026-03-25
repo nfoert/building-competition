@@ -16,7 +16,6 @@ import com.sk89q.worldedit.math.BlockVector2;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.world.block.BlockState;
 import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.domains.DefaultDomain;
 import com.sk89q.worldguard.protection.ApplicableRegionSet;
 import com.sk89q.worldguard.protection.flags.Flags;
 import com.sk89q.worldguard.protection.flags.StateFlag;
@@ -31,12 +30,10 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -54,10 +51,23 @@ public class CommandsHelper {
         config = this.plugin.getConfig();
     }
 
+    /**
+     * Helper function for sending a rich text message to the executor of the command
+     *
+     * @param context The command context
+     * @param message The message to send to the executor of the command
+     */
     private void sendMessage(CommandContext<CommandSourceStack> context, String message) {
         context.getSource().getExecutor().sendRichMessage(message);
     }
 
+
+    /**
+     * Reloads the plugin configuration
+     *
+     * @param ctx The command context
+     * @return Command.SINGLE_SUCCESS
+     */
     private int reloadPlugin(CommandContext<CommandSourceStack> ctx) {
         this.plugin.reloadConfig();
         config = this.plugin.getConfig();
@@ -67,6 +77,17 @@ public class CommandsHelper {
         return Command.SINGLE_SUCCESS;
     }
 
+    /**
+     * Builds a plot for the command executor
+     * <br>
+     * If the player already has a plot, teleport them there.
+     * <br>
+     * Otherwise, the schematic file is loaded, pasted into the world, and a WorldGuard region is created.
+     * The plot information is stored in `plots.yml`, which includes the center point for later teleporting the player.
+     *
+     * @param ctx The command context
+     * @return Command.SINGLE_SUCCESS
+     */
     private int buildPlot(CommandContext<CommandSourceStack> ctx) {
         // Set up
         PlotManager plotManager = new PlotManager(plugin);
@@ -262,6 +283,12 @@ public class CommandsHelper {
         return Command.SINGLE_SUCCESS;
     }
 
+    /**
+     * Resets `plots.yml` and clears WorldGuard regions
+     *
+     * @param ctx The command context
+     * @return Command.SINGLE_SUCCESS
+     */
     private int resetPlots(CommandContext<CommandSourceStack> ctx) {
         // Clear plots.yml
         PlotManager plotManager = new PlotManager(plugin);
@@ -310,6 +337,12 @@ public class CommandsHelper {
         return Command.SINGLE_SUCCESS;
     }
 
+    /**
+     * Gets the name of the plot owner, based on the location of the command executor
+     *
+     * @param ctx The command context
+     * @return Command.SINGLE_SUCCESS
+     */
     private int plotInfo(CommandContext<CommandSourceStack> ctx) {
         World plotWorld = getWorld(config.getString("plot-world"));
         RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
@@ -340,6 +373,12 @@ public class CommandsHelper {
         return Command.SINGLE_SUCCESS;
     }
 
+    /**
+     * Prints the plugin information and the command documentation.
+     *
+     * @param ctx The command context
+     * @return Command.SINGLE_SUCCESS
+     */
     private int pluginInfo(CommandContext<CommandSourceStack> ctx) {
         ctx.getSource().getExecutor().sendRichMessage("\n" +
                 "<b><dark_aqua>Building Competition</dark_aqua></b> by <gray>nfoert</gray>\n" +
@@ -356,6 +395,12 @@ public class CommandsHelper {
         return Command.SINGLE_SUCCESS;
     }
 
+
+    /**
+     * Registers all the commands
+     *
+     * @return The commands to register
+     */
     public LiteralCommandNode<CommandSourceStack> getCommands() {
         LiteralArgumentBuilder<CommandSourceStack> reloadCommand = Commands.literal("reload").requires(sender -> sender.getSender().hasPermission("bc.reload"))
                 .executes(ctx -> reloadPlugin(ctx));
