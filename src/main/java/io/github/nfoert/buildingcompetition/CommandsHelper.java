@@ -17,6 +17,7 @@ import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.world.block.BlockState;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.domains.DefaultDomain;
+import com.sk89q.worldguard.protection.ApplicableRegionSet;
 import com.sk89q.worldguard.protection.flags.Flags;
 import com.sk89q.worldguard.protection.flags.StateFlag;
 import com.sk89q.worldguard.protection.managers.RegionManager;
@@ -25,14 +26,17 @@ import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import com.sk89q.worldguard.protection.regions.RegionContainer;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -300,6 +304,36 @@ public class CommandsHelper {
         return Command.SINGLE_SUCCESS;
     }
 
+    private int plotInfo(CommandContext<CommandSourceStack> ctx) {
+        World plotWorld = getWorld(config.getString("plot-world"));
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
+
+        if (regionManager == null) {
+            return Command.SINGLE_SUCCESS;
+        }
+
+        // Get all regions that are applicable at the given location
+        Location playerLocation = ctx.getSource().getExecutor().getLocation();
+        ApplicableRegionSet regions = regionManager.getApplicableRegions(BlockVector3.at(playerLocation.x(), playerLocation.y(), playerLocation.z()));
+
+        if (regions.size() > 0) {
+            for (ProtectedRegion region : regions) {
+                Set<UUID> owners = region.getOwners().getPlayerDomain().getUniqueIds();
+                Set<String> usernames = new HashSet<>();
+
+                for (UUID uuid : owners) {
+                    usernames.add(Bukkit.getPlayer(uuid).getName());
+                }
+                sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Region is owned by " + String.join(", ", usernames) + "</green>");
+            }
+        } else {
+            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>You're not in a WorldGuard region!</red>");
+        }
+
+        return Command.SINGLE_SUCCESS;
+    }
+
     private int pluginInfo(CommandContext<CommandSourceStack> ctx) {
         ctx.getSource().getExecutor().sendRichMessage("\n" +
                 "<b><dark_aqua>Building Competition</dark_aqua></b> by <gray>nfoert</gray>\n" +
@@ -309,7 +343,8 @@ public class CommandsHelper {
                         "\n" +
                         "<aqua>/bc reload</aqua> <gray>- Reloads the configuration</gray>\n" +
                         "<aqua>/bc buildplot</aqua> <gray>- Builds a plot for the sender</gray>\n" +
-                        "<aqua>/bc reset</aqua> <gray>- Resets the plot file</gray>\n"
+                        "<aqua>/bc reset</aqua> <gray>- Resets the plot file</gray>\n" +
+                        "<aqua>/bc info</aqua> <gray>- Get info for a plot, based on where you're standing</gray>\n"
         );
 
         return Command.SINGLE_SUCCESS;
@@ -325,11 +360,15 @@ public class CommandsHelper {
         LiteralArgumentBuilder<CommandSourceStack> resetPlotsCommand = Commands.literal("reset").requires(sender -> sender.getSender().hasPermission("bc.reset"))
                 .executes(ctx -> resetPlots(ctx));
 
+        LiteralArgumentBuilder<CommandSourceStack> plotInfoCommand = Commands.literal("info").requires(sender -> sender.getSender().hasPermission("bc.info"))
+                .executes(ctx -> plotInfo(ctx));
+
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("bc").executes(ctx -> pluginInfo(ctx));
 
         root.then(reloadCommand);
         root.then(buildPlotCommand);
         root.then(resetPlotsCommand);
+        root.then(plotInfoCommand);
 
         return root.build();
     }
