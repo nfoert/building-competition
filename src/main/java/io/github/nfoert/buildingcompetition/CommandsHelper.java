@@ -215,7 +215,13 @@ public class CommandsHelper {
                 );
 
                 //    Create regions
-                String baseId = player.getUniqueId().toString();
+                String baseId = "";
+
+                if (config.getBoolean("dev")) {
+                    baseId = UUID.randomUUID().toString();
+                } else {
+                    baseId = player.getUniqueId().toString();
+                }
 
                 ProtectedRegion inner = new ProtectedCuboidRegion(
                         baseId + "_build",
