@@ -27,6 +27,7 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
@@ -362,7 +363,8 @@ public class CommandsHelper {
                 Set<String> usernames = new HashSet<>();
 
                 for (UUID uuid : owners) {
-                    usernames.add(Bukkit.getPlayer(uuid).getName());
+                    OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
+                    usernames.add(String.format("<yellow>%s <dark_gray>(%s)</dark_gray></yellow>", player.getName(), player.getUniqueId()));
                 }
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Region is owned by " + String.join(", ", usernames) + "</green>");
             }
