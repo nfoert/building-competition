@@ -33,6 +33,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
+import javax.swing.plaf.synth.Region;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -41,14 +42,35 @@ import java.util.*;
 import static org.bukkit.Bukkit.*;
 
 public class CommandsHelper {
-
     private final BuildingCompetition plugin;
+    private final PlotManager plotManager;
     private FileConfiguration config;
 
     public CommandsHelper(BuildingCompetition plugin) {
         this.plugin = plugin;
+        this.config = this.plugin.getConfig();
+        this.plotManager = new PlotManager(plugin);
+    }
 
-        config = this.plugin.getConfig();
+    private World getPlotWorld() {
+        String worldName = plugin.getConfig().getString("plot-world");
+        if (worldName == null) {
+            plugin.getLogger().severe("Unable to load the plot world");
+            return null;
+        } else {
+            return getWorld(worldName);
+        }
+    }
+
+    private RegionManager getRegionManager() {
+        World world = getPlotWorld();
+        if (world == null) return null;
+
+        RegionContainer container = WorldGuard.getInstance()
+                .getPlatform()
+                .getRegionContainer();
+
+        return container.get(BukkitAdapter.adapt(world));
     }
 
     /**
@@ -106,9 +128,8 @@ public class CommandsHelper {
      */
     private int buildPlot(CommandContext<CommandSourceStack> ctx) {
         // Set up
-        PlotManager plotManager = new PlotManager(plugin);
-        World plotWorld = getWorld(config.getString("plot-world"));
         Entity player = ctx.getSource().getExecutor();
+        World plotWorld = getPlotWorld();
 
         // If a player already has a plot, teleport them there
         if (config.getBoolean("dev") == false) {
@@ -131,8 +152,8 @@ public class CommandsHelper {
 
         // Load schematic
         File schematicFile = new File(
-                plugin.getDataFolder(),
-                config.getString("schem-file")
+            plugin.getDataFolder(),
+            config.getString("schem-file")
         );
 
         Clipboard clipboard = null;
@@ -186,9 +207,6 @@ public class CommandsHelper {
                 double centerX = (minPoint.x() + maxPoint.x()) / 2.0;
                 double centerZ = (minPoint.z() + maxPoint.z()) / 2.0;
                 double centerY = minPoint.y() + 2;
-
-                RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-                RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
 
                 // Save plot data
                 try {
@@ -285,8 +303,8 @@ public class CommandsHelper {
                 inner.getOwners().addPlayer(player.getUniqueId());
 
                 try {
-                    regionManager.addRegion(inner);
-                    regionManager.save();
+                    getRegionManager().addRegion(inner);
+                    getRegionManager().save();
                 } catch (Exception e) {
                     sendMessage(ctx, "<red>Failed to create regions</red>");
                     plugin.getLogger().warning("Failed to create WorldGuard regions");
@@ -323,8 +341,7 @@ public class CommandsHelper {
      */
     private int resetPlots(CommandContext<CommandSourceStack> ctx) {
         // Clear plots.yml
-        PlotManager plotManager = new PlotManager(plugin);
-        World plotWorld = getWorld(config.getString("plot-world"));
+        RegionManager regionManager = getRegionManager();
 
         try {
             plotManager.resetPlots();
@@ -340,9 +357,6 @@ public class CommandsHelper {
         }
 
         // Clear WorldGuard regions
-        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-        RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
-
         if (regionManager == null) {
             sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>WorldGuard is not available</red>");
             plugin.getLogger().warning("WorldGuard is not available when resetting plots");
@@ -380,9 +394,7 @@ public class CommandsHelper {
      * @return Command.SINGLE_SUCCESS
      */
     private int plotInfo(CommandContext<CommandSourceStack> ctx) {
-        World plotWorld = getWorld(config.getString("plot-world"));
-        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-        RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
+        RegionManager regionManager = getRegionManager();
 
         if (regionManager == null) {
             return Command.SINGLE_SUCCESS;
@@ -412,10 +424,7 @@ public class CommandsHelper {
     }
 
     private int pausePlots(CommandContext<CommandSourceStack> ctx) {
-        PlotManager plotManager = new PlotManager(plugin);
-        World plotWorld = getWorld(config.getString("plot-world"));
-        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-        RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
+        RegionManager regionManager = getRegionManager();
 
         try {
             if (plotManager.getPaused()) {
@@ -463,10 +472,7 @@ public class CommandsHelper {
     }
 
     private int unpausePlots(CommandContext<CommandSourceStack> ctx) {
-        PlotManager plotManager = new PlotManager(plugin);
-        World plotWorld = getWorld(config.getString("plot-world"));
-        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-        RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
+        RegionManager regionManager = getRegionManager();
 
         try {
             if (plotManager.getPaused()) {
