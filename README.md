@@ -22,6 +22,8 @@ Then, use `/bc buildplot` to create a plot for the command executor. Subsequent 
 
 You can use something like a Multiverse Portal to run that command for a player upon entering an area.
 
+Use `/bc info` once standing in a player's plot to get the owner of that plot. Use `/bc pause` and `/bc unpause` to stop or pause the competition.
+
 ### Full Configuration
 Configuration changes can be made to the `/plugins/building-competition/config.yml` file. Run `/bc reload` to apply these changes.
 
@@ -37,6 +39,8 @@ Configuration changes can be made to the `/plugins/building-competition/config.y
   - Default is `minecraft:redstone_block`
 - `build-height` - The height of the buildable area
   - Default is `31`
+- `player-pause-warning` - The message sent to players when the competition has been paused or stopped
+  - Default is `<b><dark_aqua>BC:</dark_aqua></b> <yellow>The building competition has ended! No more changes can be made, but you can still go back and view what you've built.</yellow>`
 
 ### Full Command Usage
 - `/bc` - Lists all commands for the plugin
