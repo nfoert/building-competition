@@ -9,7 +9,11 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Objects;
+
 public final class BuildingCompetition extends JavaPlugin implements Listener {
+    private PlotManager plotManager;
+
     @Override
     public void onLoad() {
         getServer().sendRichMessage("\n\n" +
@@ -23,11 +27,15 @@ public final class BuildingCompetition extends JavaPlugin implements Listener {
     public void onEnable() {
         saveDefaultConfig();
 
+        plotManager = new PlotManager(this);
+
         CommandsHelper commandsHelper = new CommandsHelper(this);
 
         this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
             commands.registrar().register(commandsHelper.getCommands());
         });
+
+        getServer().getPluginManager().registerEvents(this, this);
     }
 
     @Override
@@ -37,6 +45,9 @@ public final class BuildingCompetition extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        // Player join logic
+        // Notify the user if plots have been paused
+        if (plotManager.getPaused()) {
+            event.getPlayer().sendRichMessage(Objects.requireNonNull(this.getConfig().get("player-pause-warning")).toString());
+        }
     }
 }

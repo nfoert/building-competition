@@ -31,13 +31,12 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static org.bukkit.Bukkit.*;
 
@@ -59,7 +58,23 @@ public class CommandsHelper {
      * @param message The message to send to the executor of the command
      */
     private void sendMessage(CommandContext<CommandSourceStack> context, String message) {
-        context.getSource().getExecutor().sendRichMessage(message);
+        var executor = context.getSource().getExecutor();
+
+        if (executor != null) {
+            executor.sendRichMessage(message);
+        } else {
+            getServer().getConsoleSender().sendRichMessage(message);
+        }
+    }
+
+    private String getUsername(CommandContext<CommandSourceStack> context) {
+        var executor = context.getSource().getExecutor();
+
+        if (executor != null) {
+            return executor.getName();
+        } else {
+            return "N/A";
+        }
     }
 
 
@@ -73,7 +88,7 @@ public class CommandsHelper {
         this.plugin.reloadConfig();
         config = this.plugin.getConfig();
 
-        ctx.getSource().getExecutor().sendRichMessage("<b><dark_aqua>BC:</dark_aqua></b> <green>Configuration reloaded!</green>");
+        sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Configuration reloaded!</green>");
 
         return Command.SINGLE_SUCCESS;
     }
@@ -252,7 +267,12 @@ public class CommandsHelper {
                 );
 
                 // No priority needed anymore (no conflict region)
-                inner.setFlag(Flags.BUILD, StateFlag.State.ALLOW);
+                if (!plotManager.getPaused()) {
+                    inner.setFlag(Flags.BUILD, StateFlag.State.ALLOW);
+                } else {
+                    inner.setFlag(Flags.BUILD, StateFlag.State.DENY);
+                    sendMessage(ctx, Objects.requireNonNull(config.get("player-pause-warning")).toString());
+                }
 
                 // Ownership
                 inner.getOwners().addPlayer(player.getUniqueId());
@@ -375,6 +395,95 @@ public class CommandsHelper {
         return Command.SINGLE_SUCCESS;
     }
 
+    private int pausePlots(CommandContext<CommandSourceStack> ctx) {
+        PlotManager plotManager = new PlotManager(plugin);
+        World plotWorld = getWorld(config.getString("plot-world"));
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
+
+        try {
+            if (plotManager.getPaused()) {
+                sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <yellow>Plots are already paused!</yellow>");
+            } else {
+                // Set state in plot manager
+                plotManager.setPaused(true);
+
+                // Disable building in WorldGuard regions in the plot world
+                Set<String> regionIds = new HashSet<>(regionManager.getRegions().keySet());
+
+                try {
+                    for (String id : regionIds) {
+                        if (!id.equalsIgnoreCase("__global__")) {
+                            ProtectedRegion region = regionManager.getRegion(id);
+                            region.setFlag(Flags.BUILD, StateFlag.State.DENY);
+                        }
+                    }
+
+                    // Save changes
+                    regionManager.save();
+                } catch (Exception e) {
+                    sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to disable building in worldguard region</red>");
+                    e.printStackTrace();
+                }
+
+                // Notify players
+                Collection<? extends Player> players = getOnlinePlayers();
+
+                for (Player player: players) {
+                    player.sendRichMessage(Objects.requireNonNull(config.get("player-pause-warning")).toString());
+                }
+
+                sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Plots have been paused!</green>");
+            }
+        } catch (IOException e) {
+            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to pause plots!</red>");
+        }
+
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int unpausePlots(CommandContext<CommandSourceStack> ctx) {
+        PlotManager plotManager = new PlotManager(plugin);
+        World plotWorld = getWorld(config.getString("plot-world"));
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        RegionManager regionManager = container.get(BukkitAdapter.adapt(plotWorld));
+
+        try {
+            if (plotManager.getPaused()) {
+                // Set state in plot manager
+                plotManager.setPaused(false);
+
+                // Disable building in WorldGuard regions in the plot world
+                Set<String> regionIds = new HashSet<>(regionManager.getRegions().keySet());
+
+                try {
+                    for (String id : regionIds) {
+                        if (!id.equalsIgnoreCase("__global__")) {
+                            ProtectedRegion region = regionManager.getRegion(id);
+                            region.setFlag(Flags.BUILD, StateFlag.State.ALLOW);
+                        }
+                    }
+
+                    // Save changes
+                    regionManager.save();
+                } catch (Exception e) {
+                    sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to enable building in worldguard region</red>");
+                    e.printStackTrace();
+                }
+
+                // Notify players
+                //    Nothing is sent to all players when unpausing
+                sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Plots have been unpaused!</green>");
+            } else {
+                sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <yellow>Plots are already not paused!</yellow>");
+            }
+        } catch (IOException e) {
+            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to unpause plots!</red>");
+        }
+
+        return Command.SINGLE_SUCCESS;
+    }
+
     /**
      * Prints the plugin information and the command documentation.
      *
@@ -391,12 +500,13 @@ public class CommandsHelper {
                         "<aqua>/bc reload</aqua> <gray>- Reloads the configuration</gray>\n" +
                         "<aqua>/bc buildplot</aqua> <gray>- Builds a plot for the sender</gray>\n" +
                         "<aqua>/bc reset</aqua> <gray>- Resets the plot file</gray>\n" +
-                        "<aqua>/bc info</aqua> <gray>- Get info for a plot, based on where you're standing</gray>\n"
+                        "<aqua>/bc info</aqua> <gray>- Get info for a plot, based on where you're standing</gray>\n" +
+                        "<aqua>/bc pause</aqua> <gray>- Disable plot building</gray>\n" +
+                        "<aqua>/bc unpause</aqua> <gray>- Enable plot building</gray>\n"
         );
 
         return Command.SINGLE_SUCCESS;
     }
-
 
     /**
      * Registers all the commands
@@ -416,12 +526,20 @@ public class CommandsHelper {
         LiteralArgumentBuilder<CommandSourceStack> plotInfoCommand = Commands.literal("info").requires(sender -> sender.getSender().hasPermission("bc.info"))
                 .executes(ctx -> plotInfo(ctx));
 
+        LiteralArgumentBuilder<CommandSourceStack> plotPauseCommand = Commands.literal("pause").requires(sender -> sender.getSender().hasPermission("bc.pause"))
+                .executes(ctx -> pausePlots(ctx));
+
+        LiteralArgumentBuilder<CommandSourceStack> plotUnpauseCommand = Commands.literal("unpause").requires(sender -> sender.getSender().hasPermission("bc.unpause"))
+                .executes(ctx -> unpausePlots(ctx));
+
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("bc").executes(ctx -> pluginInfo(ctx));
 
         root.then(reloadCommand);
         root.then(buildPlotCommand);
         root.then(resetPlotsCommand);
         root.then(plotInfoCommand);
+        root.then(plotPauseCommand);
+        root.then(plotUnpauseCommand);
 
         return root.build();
     }

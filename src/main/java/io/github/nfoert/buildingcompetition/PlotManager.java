@@ -10,6 +10,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -175,6 +176,25 @@ public class PlotManager {
      */
     public void resetPlots() throws IOException {
         plots.set("plots", null);
+        save();
+    }
+
+    /**
+     * Checks if the plots are paused or not
+     *
+     */
+    public boolean getPaused() {
+        return Boolean.parseBoolean(plots.get("paused", false).toString());
+    }
+
+    /**
+     * Sets the paused state of the plots
+     *
+     * @param paused If plots should be paused
+     * @throws IOException
+     */
+    public void setPaused(boolean paused) throws IOException {
+        plots.set("paused", paused);
         save();
     }
 }
