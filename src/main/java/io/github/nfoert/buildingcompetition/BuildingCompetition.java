@@ -16,8 +16,8 @@ public final class BuildingCompetition extends JavaPlugin implements Listener {
 
     @Override
     public void onLoad() {
-        getServer().sendRichMessage("\n\n" +
-                "<b><dark_aqua>Building Competition</dark_aqua></b> by <gray>nfoert</gray>\n" +
+        getServer().getConsoleSender().sendRichMessage("\n\n" +
+                "<b><dark_aqua>Building Competition</dark_aqua></b> <dark_gray>(v"+ this.getClass().getPackage().getImplementationVersion() + ")</dark_gray> by <gray>nfoert</gray>\n" +
                 "<blue><i>github.com/nfoert/building-competition</i></blue>\n\n" +
                 "Please ensure you have <gold>FastAsyncWorldEdit</gold> and <gold>WorldGuard</gold> installed\n"
         );
