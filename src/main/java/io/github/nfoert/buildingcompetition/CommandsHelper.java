@@ -77,7 +77,6 @@ public class CommandsHelper {
         }
     }
 
-
     /**
      * Reloads the plugin configuration
      *
@@ -89,6 +88,7 @@ public class CommandsHelper {
         config = this.plugin.getConfig();
 
         sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Configuration reloaded!</green>");
+        plugin.getLogger().info("Configuration was reloaded by " + getUsername(ctx));
 
         return Command.SINGLE_SUCCESS;
     }
@@ -117,10 +117,12 @@ public class CommandsHelper {
                     ctx.getSource().getExecutor().teleport(plotManager.getPlotCenter(player.getUniqueId(), plotWorld));
 
                     sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>You've been teleported to your existing plot!</green>");
+                    plugin.getLogger().info(getUsername(ctx) + " was sent to their existing plot");
                     return Command.SINGLE_SUCCESS;
                 }
             } else {
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to find world!</red>");
+                plugin.getLogger().warning("Unable to find plot world when trying to teleport user to plot");
                 return Command.SINGLE_SUCCESS;
             }
         }
@@ -142,10 +144,12 @@ public class CommandsHelper {
             } catch (IOException e) {
                 e.printStackTrace();
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to load schematic</red>");
+                plugin.getLogger().warning("Failed to load schematic");
                 return Command.SINGLE_SUCCESS;
             }
         } else {
             sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to load schematic</red>");
+            plugin.getLogger().warning("Failed to load schematic");
             return Command.SINGLE_SUCCESS;
         }
 
@@ -199,6 +203,7 @@ public class CommandsHelper {
                     ctx.getSource().getExecutor().sendRichMessage(
                             "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to save plot data!</red>"
                     );
+                    plugin.getLogger().warning("Failed to save plot data");
 
                     return Command.SINGLE_SUCCESS;
                 }
@@ -227,6 +232,7 @@ public class CommandsHelper {
 
                 if (redstone1 == null || redstone2 == null) {
                     sendMessage(ctx, "<red>Schematic must contain exactly 2 redstone blocks!</red>");
+                    plugin.getLogger().warning("Schematic validation failed: It must contain exactly 2 of build-area-corner block");
                     return Command.SINGLE_SUCCESS;
                 }
 
@@ -272,6 +278,7 @@ public class CommandsHelper {
                 } else {
                     inner.setFlag(Flags.BUILD, StateFlag.State.DENY);
                     sendMessage(ctx, Objects.requireNonNull(config.get("player-pause-warning")).toString());
+                    plugin.getLogger().info("Plots are paused, so the BUILD flag is DENY when creating plot for " + getUsername(ctx));
                 }
 
                 // Ownership
@@ -282,6 +289,7 @@ public class CommandsHelper {
                     regionManager.save();
                 } catch (Exception e) {
                     sendMessage(ctx, "<red>Failed to create regions</red>");
+                    plugin.getLogger().warning("Failed to create WorldGuard regions");
                     e.printStackTrace();
                 }
 
@@ -291,13 +299,16 @@ public class CommandsHelper {
                 );
 
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>You've been teleported to your plot!</green>");
+                plugin.getLogger().info("Created plot for " + getUsername(ctx));
             } catch (WorldEditException e) {
                 e.printStackTrace();
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to paste schematic</red>");
+                plugin.getLogger().warning("Failed to paste schematic");
                 return Command.SINGLE_SUCCESS;
             }
         } else {
             sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to find world!</red>");
+            plugin.getLogger().warning("Failed to find plot world");
             return Command.SINGLE_SUCCESS;
         }
 
@@ -323,6 +334,7 @@ public class CommandsHelper {
             ctx.getSource().getExecutor().sendRichMessage(
                     "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to reset plots!</red>"
             );
+            plugin.getLogger().warning("Failed to reset plots, invoked by " + getUsername(ctx));
 
             return Command.SINGLE_SUCCESS;
         }
@@ -333,6 +345,7 @@ public class CommandsHelper {
 
         if (regionManager == null) {
             sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>WorldGuard is not available</red>");
+            plugin.getLogger().warning("WorldGuard is not available when resetting plots");
             return Command.SINGLE_SUCCESS;
         }
 
@@ -348,12 +361,14 @@ public class CommandsHelper {
 
             // Save changes
             regionManager.save();
+
+            sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Plots reset!</green>");
+            plugin.getLogger().info("Plots have been reset by " + getUsername(ctx));
         } catch (Exception e) {
             sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to remove WorldGuard region</red>");
+            plugin.getLogger().warning("Unable to remove WorldGuard region when resetting plots");
             e.printStackTrace();
         }
-
-        ctx.getSource().getExecutor().sendRichMessage("<b><dark_aqua>BC:</dark_aqua></b> <green>Plots reset!</green>");
 
         return Command.SINGLE_SUCCESS;
     }
@@ -387,6 +402,7 @@ public class CommandsHelper {
                     usernames.add(String.format("<yellow>%s <dark_gray>(%s)</dark_gray></yellow>", player.getName(), player.getUniqueId()));
                 }
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Region is owned by " + String.join(", ", usernames) + "</green>");
+                plugin.getLogger().info(getUsername(ctx) + " requested plot info");
             }
         } else {
             sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>You're not in a WorldGuard region!</red>");
@@ -404,6 +420,7 @@ public class CommandsHelper {
         try {
             if (plotManager.getPaused()) {
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <yellow>Plots are already paused!</yellow>");
+                plugin.getLogger().info(getUsername(ctx) + " tried to pause plots, but they were already paused.");
             } else {
                 // Set state in plot manager
                 plotManager.setPaused(true);
@@ -423,6 +440,7 @@ public class CommandsHelper {
                     regionManager.save();
                 } catch (Exception e) {
                     sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to disable building in worldguard region</red>");
+                    plugin.getLogger().warning(getUsername(ctx) + " tried to pause plots, but there was a problem setting DENY on the BUILD flag for a region");
                     e.printStackTrace();
                 }
 
@@ -433,10 +451,12 @@ public class CommandsHelper {
                     player.sendRichMessage(Objects.requireNonNull(config.get("player-pause-warning")).toString());
                 }
 
+                plugin.getLogger().info(getUsername(ctx) + " paused plots");
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Plots have been paused!</green>");
             }
         } catch (IOException e) {
             sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to pause plots!</red>");
+            plugin.getLogger().warning(getUsername(ctx) + "  failed to set the paused flag to the PlotManager");
         }
 
         return Command.SINGLE_SUCCESS;
@@ -468,6 +488,7 @@ public class CommandsHelper {
                     regionManager.save();
                 } catch (Exception e) {
                     sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to enable building in worldguard region</red>");
+                    plugin.getLogger().warning(getUsername(ctx) + " tried to pause plots, but there was a problem setting ALLOW on the BUILD flag for a region");
                     e.printStackTrace();
                 }
 
@@ -475,10 +496,12 @@ public class CommandsHelper {
                 //    Nothing is sent to all players when unpausing
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>Plots have been unpaused!</green>");
             } else {
+                plugin.getLogger().info(getUsername(ctx) + " tried to unpause plots, but they were already unpaused.");
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <yellow>Plots are already not paused!</yellow>");
             }
         } catch (IOException e) {
             sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Failed to unpause plots!</red>");
+            plugin.getLogger().warning(getUsername(ctx) + "  failed to set the paused flag to the PlotManager");
         }
 
         return Command.SINGLE_SUCCESS;
