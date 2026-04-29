@@ -292,7 +292,7 @@ public class CommandsHelper {
 
                 // No priority needed anymore (no conflict region)
                 if (!plotManager.getPaused()) {
-                    inner.setFlag(Flags.BUILD, StateFlag.State.ALLOW);
+                    inner.setFlag(Flags.BUILD, null);
                 } else {
                     inner.setFlag(Flags.BUILD, StateFlag.State.DENY);
                     sendMessage(ctx, Objects.requireNonNull(config.get("player-pause-warning")).toString());
@@ -486,7 +486,7 @@ public class CommandsHelper {
                     for (String id : regionIds) {
                         if (!id.equalsIgnoreCase("__global__")) {
                             ProtectedRegion region = regionManager.getRegion(id);
-                            region.setFlag(Flags.BUILD, StateFlag.State.ALLOW);
+                            region.setFlag(Flags.BUILD, null);
                         }
                     }
 
@@ -494,7 +494,7 @@ public class CommandsHelper {
                     regionManager.save();
                 } catch (Exception e) {
                     sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <red>Unable to enable building in worldguard region</red>");
-                    plugin.getLogger().warning(getUsername(ctx) + " tried to pause plots, but there was a problem setting ALLOW on the BUILD flag for a region");
+                    plugin.getLogger().warning(getUsername(ctx) + " tried to pause plots, but there was a problem setting null on the BUILD flag for a region");
                     e.printStackTrace();
                 }
 
