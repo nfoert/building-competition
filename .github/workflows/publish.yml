@@ -1,0 +1,55 @@
+name: Publish Plugin to Modrinth
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build plugin
+        run: ./gradlew build
+
+      - name: Find built jar
+        id: jar
+        run: |
+          FILE=$(find build/libs -name "*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -n 1)
+          echo "file=$FILE" >> $GITHUB_OUTPUT
+
+      - name: Upload to Modrinth
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: FxNmL5Xe
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+
+          files: ${{ steps.jar.outputs.file }}
+
+          name: ${{ github.event.release.name }}
+          version: ${{ github.event.release.tag_name }}
+          version-type: release
+
+          loaders: |
+            paper
+            purpur
+
+          game-versions: |
+            1.21
+
+          changelog: ${{ github.event.release.body }}
