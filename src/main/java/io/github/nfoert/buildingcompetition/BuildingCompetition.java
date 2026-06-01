@@ -28,39 +28,15 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-import static io.github.nfoert.buildingcompetition.Utils.getUsername;
-import static io.github.nfoert.buildingcompetition.Utils.sendMessage;
+import static io.github.nfoert.buildingcompetition.Utils.*;
 import static org.bukkit.Bukkit.getWorld;
 
 public final class BuildingCompetition extends JavaPlugin implements Listener {
     private PlotManager plotManager;
     private final int KEEP_IN_PLOT_DISTANCE = getConfig().getInt("keep-in-plot-distance", 16);
 
-    // TODO: Unify with equivalent in CommandsHelper
-    private World getPlotWorld() {
-        String worldName = getConfig().getString("plot-world");
-        if (worldName == null) {
-            getLogger().severe("Unable to load the plot world");
-            return null;
-        } else {
-            return getWorld(worldName);
-        }
-    }
-
-    // TODO: Unify with equivalent in CommandsHelper
-    private RegionManager getRegionManager() {
-        World world = getPlotWorld();
-        if (world == null) return null;
-
-        RegionContainer container = WorldGuard.getInstance()
-                .getPlatform()
-                .getRegionContainer();
-
-        return container.get(BukkitAdapter.adapt(world));
-    }
-
     private boolean isInsidePlot(Player player, Location location) {
-        RegionManager regionManager = getRegionManager();
+        RegionManager regionManager = getRegionManager(this);
 
         if (regionManager == null) {
             return true;
@@ -141,7 +117,7 @@ public final class BuildingCompetition extends JavaPlugin implements Listener {
         Player player = event.getPlayer();
         if (player.isOp()) return;
         if (player.hasPermission("bc.ignore-keep-in-plot")) return;
-        if (!(player.getWorld() == getPlotWorld())) return;
+        if (!(player.getWorld() == getPlotWorld(this))) return;
 
         if (!isInsidePlot(player, to)) {
             event.setTo(from);
@@ -155,7 +131,7 @@ public final class BuildingCompetition extends JavaPlugin implements Listener {
         if (plotManager.getVersion() == 0) {
             getLogger().info("Migrating plots.yml to version 1...");
             // Add support for teleportX and teleportZ
-            RegionManager regionManager = getRegionManager();
+            RegionManager regionManager = getRegionManager(this);
 
             if (regionManager == null) {
                 getLogger().severe("Unable to load the region manager");

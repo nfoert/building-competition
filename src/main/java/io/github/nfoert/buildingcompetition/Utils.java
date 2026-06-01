@@ -1,9 +1,16 @@
 package io.github.nfoert.buildingcompetition;
 
 import com.mojang.brigadier.context.CommandContext;
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldguard.WorldGuard;
+import com.sk89q.worldguard.protection.managers.RegionManager;
+import com.sk89q.worldguard.protection.regions.RegionContainer;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import org.bukkit.World;
+import org.bukkit.plugin.Plugin;
 
 import static org.bukkit.Bukkit.getServer;
+import static org.bukkit.Bukkit.getWorld;
 
 public class Utils {
     /**
@@ -37,5 +44,38 @@ public class Utils {
         } else {
             return "N/A";
         }
+    }
+
+    /**
+     * Get the plot world
+     *
+     * @param plugin The plugin instance
+     * @return The plot world
+     */
+    public static World getPlotWorld(Plugin plugin) {
+        String worldName = plugin.getConfig().getString("plot-world");
+        if (worldName == null) {
+            plugin.getLogger().severe("Unable to load the plot world");
+            return null;
+        } else {
+            return getWorld(worldName);
+        }
+    }
+
+    /**
+     * Get the region manager
+     *
+     * @param plugin The plugin instance
+     * @return The region manager
+     */
+    public static RegionManager getRegionManager(Plugin plugin) {
+        World world = getPlotWorld(plugin);
+        if (world == null) return null;
+
+        RegionContainer container = WorldGuard.getInstance()
+                .getPlatform()
+                .getRegionContainer();
+
+        return container.get(BukkitAdapter.adapt(world));
     }
 }

@@ -12,6 +12,8 @@ import io.papermc.paper.command.brigadier.Commands;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 
+import static io.github.nfoert.buildingcompetition.Utils.getPlotWorld;
+import static io.github.nfoert.buildingcompetition.Utils.getRegionManager;
 import static org.bukkit.Bukkit.getWorld;
 
 public class CommandsHelper {
@@ -25,40 +27,19 @@ public class CommandsHelper {
         this.plotManager = new PlotManager(plugin);
     }
 
-    private World getPlotWorld() {
-        String worldName = plugin.getConfig().getString("plot-world");
-        if (worldName == null) {
-            plugin.getLogger().severe("Unable to load the plot world");
-            return null;
-        } else {
-            return getWorld(worldName);
-        }
-    }
-
-    private RegionManager getRegionManager() {
-        World world = getPlotWorld();
-        if (world == null) return null;
-
-        RegionContainer container = WorldGuard.getInstance()
-                .getPlatform()
-                .getRegionContainer();
-
-        return container.get(BukkitAdapter.adapt(world));
-    }
-
     /**
      * Registers all the commands
      *
      * @return The commands to register
      */
     public LiteralCommandNode<CommandSourceStack> getCommands() {
-        BuildPlotCommand buildPlotCommand = new BuildPlotCommand(this.plugin, this::getPlotWorld, this.config, this.plotManager, getRegionManager());
-        PausePlotsCommand pausePlotsCommand = new PausePlotsCommand(this.plugin, this.plotManager, getRegionManager(), this.config);
-        PlotInfoCommand plotInfoCommand = new PlotInfoCommand(this.plugin, getRegionManager());
+        BuildPlotCommand buildPlotCommand = new BuildPlotCommand(this.plugin, getPlotWorld(this.plugin), this.config, this.plotManager, getRegionManager(this.plugin));
+        PausePlotsCommand pausePlotsCommand = new PausePlotsCommand(this.plugin, this.plotManager, getRegionManager(this.plugin), this.config);
+        PlotInfoCommand plotInfoCommand = new PlotInfoCommand(this.plugin, getRegionManager(this.plugin));
         PluginInfoCommand pluginInfoCommand = new PluginInfoCommand();
         ReloadPluginCommand reloadPluginCommand = new ReloadPluginCommand(this.plugin, this.config);
-        ResetPlotsCommand resetPlotsCommand = new ResetPlotsCommand(this.plugin, this.plotManager, getRegionManager());
-        UnpausePlotsCommand unpausePlotsCommand = new UnpausePlotsCommand(this.plugin, this.plotManager, getRegionManager());
+        ResetPlotsCommand resetPlotsCommand = new ResetPlotsCommand(this.plugin, this.plotManager, getRegionManager(this.plugin));
+        UnpausePlotsCommand unpausePlotsCommand = new UnpausePlotsCommand(this.plugin, this.plotManager, getRegionManager(this.plugin));
 
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("bc").executes(pluginInfoCommand::execute);
         root.then(Commands.literal("buildplot")

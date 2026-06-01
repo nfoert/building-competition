@@ -41,14 +41,14 @@ import static io.github.nfoert.buildingcompetition.Utils.sendMessage;
 
 public class BuildPlotCommand {
     private final BuildingCompetition plugin;
-    private Supplier<World> getPlotWorld;
+    private World plotWorld;
     private final FileConfiguration config;
     private final PlotManager plotManager;
     private final RegionManager regionManager;
 
-    public BuildPlotCommand(BuildingCompetition plugin, Supplier<World> getPlotWorld, FileConfiguration config, PlotManager plotManager, RegionManager regionManager) {
+    public BuildPlotCommand(BuildingCompetition plugin, World plotWorld, FileConfiguration config, PlotManager plotManager, RegionManager regionManager) {
         this.plugin = plugin;
-        this.getPlotWorld = getPlotWorld;
+        this.plotWorld = plotWorld;
         this.config = config;
         this.plotManager = plotManager;
         this.regionManager = regionManager;
@@ -98,7 +98,6 @@ public class BuildPlotCommand {
     public int execute(CommandContext<CommandSourceStack> ctx) {
         // Set up
         Entity player = ctx.getSource().getExecutor();
-        World plotWorld = getPlotWorld.get();
 
         // If a player already has a plot, teleport them there
         if (config.getBoolean("dev") == false) {
