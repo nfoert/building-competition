@@ -23,6 +23,8 @@ import io.github.nfoert.buildingcompetition.PlotManager;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 
@@ -52,6 +54,47 @@ public class BuildPlotCommand {
         this.regionManager = regionManager;
     }
 
+    /**
+     * Checks whether a location is safe for a player to stand in.
+     *
+     * @param location The location to check
+     * @return If it's a safe position to teleport to or not
+     */
+    private boolean isSafeTeleportLocation(Location location) {
+        World world = location.getWorld();
+        if (world == null) {
+            return false;
+        }
+
+        Block feet = location.getBlock();
+        Block head = feet.getRelative(BlockFace.UP);
+        Block ground = feet.getRelative(BlockFace.DOWN);
+
+        return feet.isPassable()
+                && head.isPassable()
+                && ground.getType().isSolid();
+    }
+
+    /**
+     * Teleport a player to their plot.
+     * Try to teleport in the center of their build. If that location is obstructed, teleport to the corner of their plot instead.
+     *
+     * @param player The player to teleport
+     * @param plotWorld The world to teleport the player in
+     */
+    private void teleportToPlot(Entity player, World plotWorld) {
+        UUID uuid = player.getUniqueId();
+
+        Location center = plotManager.getPlotCenter(uuid, plotWorld);
+
+        if (isSafeTeleportLocation(center)) {
+            player.teleport(center);
+        } else {
+            Location corner = plotManager.getCornerTeleportLocation(uuid, plotWorld);
+            player.teleport(corner);
+        }
+    }
+
     public int execute(CommandContext<CommandSourceStack> ctx) {
         // Set up
         Entity player = ctx.getSource().getExecutor();
@@ -61,7 +104,7 @@ public class BuildPlotCommand {
         if (config.getBoolean("dev") == false) {
             if (plotWorld != null) {
                 if (plotManager.hasPlot(player.getUniqueId())) {
-                    ctx.getSource().getExecutor().teleport(plotManager.getPlotCenter(player.getUniqueId(), plotWorld));
+                    teleportToPlot(ctx.getSource().getExecutor(), plotWorld);
 
                     sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>You've been teleported to your existing plot!</green>");
                     plugin.getLogger().info(getUsername(ctx) + " was sent to their existing plot");
@@ -137,9 +180,9 @@ public class BuildPlotCommand {
                 // Save plot data
                 try {
                     if (config.getBoolean("dev")) {
-                        plotManager.setPlot(UUID.randomUUID(), x, z, centerX, centerY, centerZ);
+                        plotManager.setPlot(UUID.randomUUID(), x, z, centerX, centerY, centerZ, minPoint.x() - 1, minPoint.y() + 1, minPoint.z() - 1);
                     } else {
-                        plotManager.setPlot(ctx.getSource().getExecutor().getUniqueId(), x, z, centerX, centerY, centerZ);
+                        plotManager.setPlot(ctx.getSource().getExecutor().getUniqueId(), x, z, centerX, centerY, centerZ, minPoint.x() - 1, minPoint.y() + 1, minPoint.z() - 1);
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -238,9 +281,7 @@ public class BuildPlotCommand {
                 }
 
                 // Teleport to the center of the plot
-                ctx.getSource().getExecutor().teleport(
-                        new Location(plotWorld, centerX + 0.5, centerY, centerZ + 0.5)
-                );
+                teleportToPlot(ctx.getSource().getExecutor(), plotWorld);
 
                 sendMessage(ctx, "<b><dark_aqua>BC:</dark_aqua></b> <green>You've been teleported to your plot!</green>");
                 plugin.getLogger().info("Created plot for " + getUsername(ctx));
