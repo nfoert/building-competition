@@ -34,7 +34,6 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 import static io.github.nfoert.buildingcompetition.Utils.getUsername;
 import static io.github.nfoert.buildingcompetition.Utils.sendMessage;

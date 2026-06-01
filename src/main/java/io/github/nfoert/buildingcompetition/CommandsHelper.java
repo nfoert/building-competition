@@ -2,19 +2,13 @@ package io.github.nfoert.buildingcompetition;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.protection.managers.RegionManager;
-import com.sk89q.worldguard.protection.regions.RegionContainer;
 import io.github.nfoert.buildingcompetition.commands.*;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
-import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import static io.github.nfoert.buildingcompetition.Utils.getPlotWorld;
 import static io.github.nfoert.buildingcompetition.Utils.getRegionManager;
-import static org.bukkit.Bukkit.getWorld;
 
 public class CommandsHelper {
     private final BuildingCompetition plugin;
