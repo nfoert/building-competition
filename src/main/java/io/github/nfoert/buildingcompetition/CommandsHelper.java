@@ -53,7 +53,7 @@ public class CommandsHelper {
      */
     public LiteralCommandNode<CommandSourceStack> getCommands() {
         BuildPlotCommand buildPlotCommand = new BuildPlotCommand(this.plugin, this::getPlotWorld, this.config, this.plotManager, getRegionManager());
-        PausePlotsCommand pausePlotsCommand = new PausePlotsCommand(this.plugin, this.plotManager, getRegionManager());
+        PausePlotsCommand pausePlotsCommand = new PausePlotsCommand(this.plugin, this.plotManager, getRegionManager(), this.config);
         PlotInfoCommand plotInfoCommand = new PlotInfoCommand(this.plugin, getRegionManager());
         PluginInfoCommand pluginInfoCommand = new PluginInfoCommand();
         ReloadPluginCommand reloadPluginCommand = new ReloadPluginCommand(this.plugin, this.config);

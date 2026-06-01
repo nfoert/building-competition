@@ -9,6 +9,7 @@ import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import io.github.nfoert.buildingcompetition.BuildingCompetition;
 import io.github.nfoert.buildingcompetition.PlotManager;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
 import java.io.IOException;
@@ -25,11 +26,13 @@ public class PausePlotsCommand {
     private final BuildingCompetition plugin;
     private final PlotManager plotManager;
     private final RegionManager regionManager;
+    private final FileConfiguration config;
 
-    public PausePlotsCommand(BuildingCompetition plugin, PlotManager plotManager, RegionManager regionManager) {
+    public PausePlotsCommand(BuildingCompetition plugin, PlotManager plotManager, RegionManager regionManager, FileConfiguration config) {
         this.plugin = plugin;
         this.plotManager = plotManager;
         this.regionManager = regionManager;
+        this.config = config;
     }
 
     public int execute(CommandContext<CommandSourceStack> ctx) {
