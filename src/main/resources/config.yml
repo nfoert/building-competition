@@ -6,3 +6,5 @@ build-area-corner: minecraft:redstone_block
 build-height: 31
 
 player-pause-warning: <b><dark_aqua>BC:</dark_aqua></b> <yellow>The building competition has ended! No more changes can be made, but you can still go back and view what you've built.</yellow>
+
+keep-in-plot-distance: 16

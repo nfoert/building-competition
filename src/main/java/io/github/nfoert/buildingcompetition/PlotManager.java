@@ -57,6 +57,13 @@ public class PlotManager {
         return plots.contains("plots." + uuid.toString());
     }
 
+    /**
+     * Gets the corner point of a user's plot. Used for teleporting the player to their plot.
+     *
+     * @param uuid The player's UUID
+     * @param world The world where the plot is located
+     * @return The location of the corner of the plot
+     */
     public Location getPlot(UUID uuid, World world) {
         String path = "plots." + uuid;
 
@@ -77,7 +84,7 @@ public class PlotManager {
         String path = "plots." + uuid;
 
         int x = plots.getInt(path + ".centerX");
-        int y = plots.getInt(path + ".centerY");
+        int y = plots.getInt(path + ".teleportY");
         int z = plots.getInt(path + ".centerZ");
 
         return new Location(world, x, y, z);
@@ -92,9 +99,12 @@ public class PlotManager {
      * @param centerX The center x of the plot
      * @param centerY The center y of the plot
      * @param centerZ The center z of the plot
+     * @param teleportX The x location to teleport the player to
+     * @param teleportY The y height
+     * @param teleportZ The z location to teleport the player to
      * @throws IOException If `plots.yml` is not able to be saved
      */
-    public void setPlot(UUID uuid, int x, int z, double centerX, double centerY, double centerZ) throws IOException {
+    public void setPlot(UUID uuid, int x, int z, double centerX, double centerY, double centerZ, double teleportX, double teleportY, double teleportZ) throws IOException {
         String path = "plots." + uuid;
 
         plots.set(path + ".x", x);
@@ -103,6 +113,10 @@ public class PlotManager {
         plots.set(path + ".centerX", centerX);
         plots.set(path + ".centerY", centerY);
         plots.set(path + ".centerZ", centerZ);
+
+        plots.set(path + ".teleportX", teleportX);
+        plots.set(path + ".teleportY", teleportY);
+        plots.set(path + ".teleportZ", teleportZ);
 
         save();
     }
@@ -182,6 +196,7 @@ public class PlotManager {
     /**
      * Checks if the plots are paused or not
      *
+     * @return True if the plots are paused
      */
     public boolean getPaused() {
         return Boolean.parseBoolean(plots.get("paused", false).toString());
@@ -196,5 +211,63 @@ public class PlotManager {
     public void setPaused(boolean paused) throws IOException {
         plots.set("paused", paused);
         save();
+    }
+
+
+    /**
+     * Set the version of the plots file
+     *
+     * @param version The version to set
+     * @throws IOException
+     */
+    public void setVersion(int version) throws IOException {
+        plots.set("version", version);
+        save();
+    }
+
+    /**
+     * Get the current version of the plots file.
+     * If 0, no version has been set yet.
+     *
+     * @return The current plots version
+     */
+    public int getVersion() {
+        return (int) plots.get("version", 0);
+    }
+
+    /**
+     * Used when migrating the plot version from 0 to 1.
+     * Sets the new corner teleport location for the plot, using the corner position of the WorldGuard region.
+     *
+     * @param uuid The player's UUID
+     * @param teleportX The X corner teleport location
+     * @param teleportY The teleport height
+     * @param teleportZ The Z corner teleport location
+     */
+    public void setTeleportLocation(UUID uuid, double teleportX, double teleportY, double teleportZ) throws IOException {
+        String path = "plots." + uuid;
+
+        plots.set(path + ".teleportX", teleportX);
+        plots.set(path + ".teleportY", teleportY);
+        plots.set(path + ".teleportZ", teleportZ);
+
+        save();
+    }
+
+    /**
+     * Get the corner teleport location for a plot
+     *
+     * @param uuid The player's UUID
+     * @param world The world where the location is
+     * @return The corner teleport location
+     */
+    public Location getCornerTeleportLocation(UUID uuid, World world) {
+        String path = "plots." + uuid;
+
+        int x = plots.getInt(path + ".teleportX");
+        int y = plots.getInt(path + ".teleportY");
+        int z = plots.getInt(path + ".teleportZ");
+
+        return new Location(world, x, y, z);
     }
 }

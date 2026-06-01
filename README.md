@@ -41,6 +41,8 @@ Configuration changes can be made to the `/plugins/building-competition/config.y
   - Default is `31`
 - `player-pause-warning` - The message sent to players when the competition has been paused or stopped
   - Default is `<b><dark_aqua>BC:</dark_aqua></b> <yellow>The building competition has ended! No more changes can be made, but you can still go back and view what you've built.</yellow>`
+- `keep-in-plot-distance` - The distance a player can be from their plot's WorldGuard region before they are teleported back to it
+  - Default is `16`
 
 ### Full Command Usage
 - `/bc` - Lists all commands for the plugin
@@ -49,6 +51,10 @@ Configuration changes can be made to the `/plugins/building-competition/config.y
 - `/bc reset` - Resets the `plots.yml` file. This clears all WorldGuard regions and makes places where plots were before able to be replaced with new plots.
 - `/bc info` - Gets the owner of the plot that the executor is standing in. Uses the WorldGuard region owner.
 
+### Permissions
+- `bc.ignore-keep-in-plot` - Allows a player to ignore the `keep-in-plot-distance` check
+- 
+There are also permissions for each command
 
 ## To-Do
 - [x] Make a chat command
@@ -62,5 +68,5 @@ Configuration changes can be made to the `/plugins/building-competition/config.y
     3. Set plot details in the JSON file: `uuid`, `plot_width`, `plot_height`, `plot_x`, `plot_y`
 - [x] Command permissions
 - [x] When creating a plot, create a worldguard allow on their plot
-- [ ] Refactor and clean up
+- [x] Refactor and clean up
 - [x] Add command for getting plot info
